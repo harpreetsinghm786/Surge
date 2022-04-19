@@ -2,8 +2,10 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:sergeapp/home/home.dart';
+import 'package:sergeapp/mediumline/mediumline.dart';
 import 'package:sergeapp/singleline/components.dart';
 import 'package:sergeapp/singleline/shortline.dart';
+import '../Longline/longline.dart';
 import '../contants.dart';
 import 'area_info_text.dart';
 import 'coding.dart';
@@ -65,7 +67,9 @@ class SideMenu extends StatelessWidget {
                               "Medium Line",
                               style: Theme.of(context).textTheme.subtitle2,
                             ),
-                            onTap: (){},
+                            onTap: (){
+                              Navigator.pushAndRemoveUntil(context, new MaterialPageRoute(builder: (context)=>Mediumline()), (route) => false);
+                            },
                           ),
                           Divider(),
                           ListTile(
@@ -74,7 +78,9 @@ class SideMenu extends StatelessWidget {
                               "Long Line",
                               style: Theme.of(context).textTheme.subtitle2,
                             ),
-                            onTap: (){},
+                            onTap: (){
+                              Navigator.pushAndRemoveUntil(context, new MaterialPageRoute(builder: (context)=>Longline()), (route) => false);
+                            },
                           ),
                         ],
                       ),

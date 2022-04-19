@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+
 import '../components/responsive.dart';
 import '../components/sidemenu.dart';
 import '../contants.dart';
 import 'components.dart';
 
-class Home extends StatelessWidget {
-  const Home({Key? key}) : super(key: key);
+class Mediumline extends StatelessWidget {
+  const Mediumline({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -14,13 +15,13 @@ class Home extends StatelessWidget {
       appBar: Responsive.isdesktop(context)
           ? null
           : AppBar(
-              backgroundColor: bgcolor,
-              leading: Builder(
-                builder: (context)=>IconButton(onPressed: (){
-                  Scaffold.of(context).openDrawer();
-                }, icon: Icon(Icons.menu)),
-              )
-            ),
+          backgroundColor: bgcolor,
+          leading: Builder(
+            builder: (context)=>IconButton(onPressed: (){
+              Scaffold.of(context).openDrawer();
+            }, icon: Icon(Icons.menu)),
+          )
+      ),
       drawer: SideMenu(),
       body: Center(
         child: Container(
@@ -35,8 +36,7 @@ class Home extends StatelessWidget {
               ),
               Expanded(
                 flex: 7,
-                 child: HomeScreen(),
-
+                child: Mediumlinescreen(),
               ),
 
             ],

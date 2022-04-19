@@ -1,3 +1,4 @@
+import 'dart:html';
 import 'dart:math';
 
 import 'package:complex/complex.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sergeapp/scripts/script.dart';
 import 'package:sergeapp/singleline/shortlinebanner.dart';
+import 'package:syncfusion_flutter_charts/charts.dart';
 
 import '../components/footer.dart';
 import '../components/responsive.dart';
@@ -19,6 +21,8 @@ class Shortlinescreen extends StatefulWidget {
 }
 
 class _ShortlinescreenState extends State<Shortlinescreen> {
+  List<_Lengthvseff> sendingdata = [];
+  List<_Lengthvseff> recievingdata = [];
   final formKey1 = GlobalKey<FormState>();
   final formKey2 = GlobalKey<FormState>();
   String? linelength,
@@ -128,6 +132,13 @@ class _ShortlinescreenState extends State<Shortlinescreen> {
                       style: getstyle(18, FontWeight.w500, Colors.blue),
                     ),
 
+
+                    SizedBox(height: 10,),
+
+                    Text(
+                      "0 - 80 KM",
+                      style: getstyle(18, FontWeight.w500, Colors.white),
+                    ),
                     //sending end
 
                     SizedBox(
@@ -209,7 +220,7 @@ class _ShortlinescreenState extends State<Shortlinescreen> {
                                             color: Colors.blue),
                                         child: Center(
                                           child: Text(
-                                            "ohm",
+                                            "ohm/km",
                                             style: getstyle(
                                                 15, FontWeight.normal, Colors.white),
                                           ),
@@ -244,7 +255,7 @@ class _ShortlinescreenState extends State<Shortlinescreen> {
                                             color: Colors.blue),
                                         child: Center(
                                           child: Text(
-                                            "H",
+                                            "H/km",
                                             style: getstyle(
                                                 15, FontWeight.normal, Colors.white),
                                           ),
@@ -354,7 +365,7 @@ class _ShortlinescreenState extends State<Shortlinescreen> {
                                             color: Colors.blue),
                                         child: Center(
                                           child: Text(
-                                            "Rad",
+                                            "rad",
                                             style: getstyle(
                                                 15, FontWeight.normal, Colors.white),
                                           ),
@@ -437,7 +448,7 @@ class _ShortlinescreenState extends State<Shortlinescreen> {
                                                 color: Colors.blue),
                                             child: Center(
                                               child: Text(
-                                                "watt",
+                                                "VA",
                                                 style: getstyle(
                                                     15,
                                                     FontWeight.normal,
@@ -625,6 +636,7 @@ class _ShortlinescreenState extends State<Shortlinescreen> {
                             height: 50,
                             child: FlatButton(
                               onPressed: () {
+
                                 if (formKey1.currentState!.validate()) {
                                   formKey1.currentState!.save();
                                   double MVs=double.parse(absvs!)/sqrt(3.0);
@@ -659,12 +671,50 @@ class _ShortlinescreenState extends State<Shortlinescreen> {
                                   double eff = S_efficiency(S, I, Vr, Pf);
                                   double RP = (Complex(3.0) * Vr * I.conjugate()).abs();
 
+                                  sendingdata.clear();
+
+                                  for(double i=0;i<=80;i+=16){
+
+                                    Complex Z=Z_calc(R, L, f, i);
+                                    Complex I;
+                                    if(_value==false){
+                                      double Pf=double.parse(powerfactor!);
+                                      double SS=double.parse(complexpower!);
+                                      I=I_calc_S(Vs, SS, Pf, _sign1);
+                                    }else{
+                                      double MI=double.parse(current!);
+                                      double Marg=double.parse(argumentofcurrent!);
+                                      I=Complex(MI*cos(Marg),MI*sin(Marg));
+
+                                    }
+
+                                    Complex Vr=Vr_calc(Vs, Z, I);
+                                    double Reg = Regulation(Vs, Vr);
+                                    double S=3.0*(Vs*I.conjugate()).abs();
+                                    double Mang=(Vs*I.conjugate()).argument();
+                                    double Pf=cos(Mang);
+                                    double RS=(Complex(3.0)*(Vr*I.conjugate())).abs();
+                                    double arg=(Complex(3.0)*(Vr*I.conjugate())).argument();
+
+                                    double e = S_efficiency(S, I, Vr, Pf);
+
+                                    sendingdata.add(_Lengthvseff(i, e),);
+
+                                  }
+
+
                                   setState(() {
-                                    out = "Vr = $Vr \n "
-                                        "Ir = $I \n"
-                                        "Receiving End Power = $RP \n"
-                                        "Regulation = $Reg \n"
-                                        "Line Efficiency = $eff \n";
+
+                                    String vr=Vr.imaginary<0?Vr.real.toString()+" - j"+Vr.imaginary.abs().toString():
+                                    Vr.real.toString()+" + j"+Vr.imaginary.abs().toString();
+                                    String ir=I.imaginary<0?I.real.toString()+" - j"+I.imaginary.abs().toString():
+                                    I.real.toString()+" + j"+I.imaginary.toString();
+
+                                    out = "Receiving End Voltage (Vr) :\n $vr V\n\n "
+                                        "Receiving End Current (Ir) : \n $ir A\n\n"
+                                        "Receiving End Power = $RP W\n\n"
+                                        "Regulation = $Reg \n\n"
+                                        "Line Efficiency = $eff% \n\n";
                                   });
 
 
@@ -679,9 +729,28 @@ class _ShortlinescreenState extends State<Shortlinescreen> {
                         ],)),
 
                     SizedBox(height: 20,),
+                    sendingdata.length>0? SfCartesianChart(
+                        primaryXAxis: CategoryAxis(),
+                        // Chart title
+                        title: ChartTitle(text: 'Line Efficiency Analysis',textStyle: getstyle(13, FontWeight.w500, Colors.white)),
+                        // Enable legend
+                        legend: Legend(isVisible: true),
+                        // Enable tooltip
+                        tooltipBehavior: TooltipBehavior(enable: true),
+                        series: <ChartSeries<_Lengthvseff, double>>[
+                          LineSeries<_Lengthvseff, double>(
+                              dataSource: sendingdata,
+                              xValueMapper: (_Lengthvseff sales, _) => sales.len,
+                              yValueMapper: (_Lengthvseff sales, _) => sales.eff,
+                              name: 'Efficiency',
+                              // Enable data label
+                              dataLabelSettings: DataLabelSettings(isVisible: true))
+                        ]):Container(),
+
+                    SizedBox(height: 20,),
 
                     Container(
-                      height: 200,
+                      height: 300,
                       width: double.infinity,
                       padding: EdgeInsets.only(left: 15),
                       alignment: Alignment.centerLeft,
@@ -801,7 +870,7 @@ class _ShortlinescreenState extends State<Shortlinescreen> {
                                             color: Colors.blue),
                                         child: Center(
                                           child: Text(
-                                            "ohm",
+                                            "ohm/km",
                                             style: getstyle(
                                                 15, FontWeight.normal, Colors.white),
                                           ),
@@ -836,7 +905,7 @@ class _ShortlinescreenState extends State<Shortlinescreen> {
                                             color: Colors.blue),
                                         child: Center(
                                           child: Text(
-                                            "H",
+                                            "H/km",
                                             style: getstyle(
                                                 15, FontWeight.normal, Colors.white),
                                           ),
@@ -946,7 +1015,7 @@ class _ShortlinescreenState extends State<Shortlinescreen> {
                                             color: Colors.blue),
                                         child: Center(
                                           child: Text(
-                                            "Rad",
+                                            "rad",
                                             style: getstyle(
                                                 15, FontWeight.normal, Colors.white),
                                           ),
@@ -1029,7 +1098,7 @@ class _ShortlinescreenState extends State<Shortlinescreen> {
                                                 color: Colors.blue),
                                             child: Center(
                                               child: Text(
-                                                "watt",
+                                                "VA",
                                                 style: getstyle(
                                                     15,
                                                     FontWeight.normal,
@@ -1228,6 +1297,10 @@ class _ShortlinescreenState extends State<Shortlinescreen> {
 
                                   Complex Vr=Complex(MVr*cos(ang),MVr*sin(ang));
                                   Complex Z=Z_calc(R, L, f, l);
+
+
+
+
                                   Complex I;
                                   if(_value2==false){
                                     double Pf=double.parse(powerfactorR!);
@@ -1239,6 +1312,8 @@ class _ShortlinescreenState extends State<Shortlinescreen> {
                                     I=Complex(MI*cos(Marg),MI*sin(Marg));
                                   }
 
+
+
                                   Complex Vs=Vs_calc(Vr, Z, I);
                                   double Reg = Regulation(Vs, Vr);
                                   double S=3.0*(Vr*I.conjugate()).abs();
@@ -1248,13 +1323,51 @@ class _ShortlinescreenState extends State<Shortlinescreen> {
                                   double eff = R_efficiency(S, I, Vs, Pf);
                                   double SP = (Complex(3.0) * Vs * I.conjugate()).abs();
 
+                                  recievingdata.clear();
 
-                                  setState(() {
-                                    out2 = "Vs = $Vs \n "
-                                        "Is = $I \n"
-                                        "Sending End Power = $SP \n"
-                                        "Regulation = $Reg \n"
-                                        "Line Efficiency = $eff \n";
+                                  for(double i=0;i<=80;i+=16){
+
+                                    Complex Vr=Complex(MVr*cos(ang),MVr*sin(ang));
+                                    Complex Z=Z_calc(R, L, f, i);
+                                    Complex I;
+                                    if(_value2==false){
+                                      double Pf=double.parse(powerfactorR!);
+                                      double SS=double.parse(complexpowerR!);
+                                      I=I_calc_R(Vr, SS, Pf, _sign2);
+                                    }else{
+                                      double MI=double.parse(currentR!);
+                                      double Marg=double.parse(argumentofcurrentR!);
+                                      I=Complex(MI*cos(Marg),MI*sin(Marg));
+                                    }
+
+                                    Complex Vs=Vs_calc(Vr, Z, I);
+                                    double Reg = Regulation(Vs, Vr);
+                                    double S=3.0*(Vr*I.conjugate()).abs();
+                                    double Mang=(Vr*I.conjugate()).argument();
+                                    double Pf=cos(Mang);
+
+                                    double e = R_efficiency(S, I, Vs, Pf);
+
+
+                                    recievingdata.add(_Lengthvseff(i, e),);
+
+                                  }
+
+
+                                 setState(() {
+                                    String vs=Vs.imaginary<0?Vs.real.toString()+" - j"+Vs.imaginary.abs().toString():
+                                    Vs.real.toString()+" + j"+Vs.imaginary.toString();
+                                    String IS=I.imaginary<0?I.real.toString()+" - j"+I.imaginary.abs().toString():
+                                    I.real.toString()+" + j"+I.imaginary.toString();
+
+                                    out2 = "Sending End Voltage (Vs) :\n $vs. V \n\n"
+                                        "Sending End Current (Is) :\n $IS A \n\n"
+                                        "Sending End Power : $SP Watt\n\n"
+                                        "Regulation : $Reg \n\n"
+                                        "Line Efficiency : $eff%\n\n";
+
+
+
                                     //out2="$Z";
                                   });
 
@@ -1270,10 +1383,30 @@ class _ShortlinescreenState extends State<Shortlinescreen> {
                         ],)),
 
                     SizedBox(height: 20,),
+                    recievingdata.length>0? SfCartesianChart(
+                        primaryXAxis: CategoryAxis(),
+                        // Chart title
+
+                        title: ChartTitle(text: 'Line Efficiency Analysis',textStyle: getstyle(13, FontWeight.w500, Colors.white)),
+                        // Enable legend
+                        legend: Legend(isVisible: true),
+                        // Enable tooltip
+                        tooltipBehavior: TooltipBehavior(enable: true),
+                        series: <ChartSeries<_Lengthvseff, double>>[
+                          LineSeries<_Lengthvseff, double>(
+                              dataSource: recievingdata,
+                              xValueMapper: (_Lengthvseff sales, _) => sales.len,
+                              yValueMapper: (_Lengthvseff sales, _) => sales.eff,
+                              name: 'Efficiency',
+                              // Enable data label
+                              dataLabelSettings: DataLabelSettings(isVisible: true))
+                        ]):Container(),
+
+                    SizedBox(height: 20,),
 
 
                     Container(
-                      height: 200,
+                      height: 300,
                       width: double.infinity,
                       padding: EdgeInsets.only(left: 15),
                       alignment: Alignment.centerLeft,
@@ -2132,6 +2265,15 @@ class _ShortlinescreenState extends State<Shortlinescreen> {
 
 
 
+
+
+}
+
+class _Lengthvseff {
+
+  _Lengthvseff(this.len, this.eff);
+  final double len;
+  final double eff;
 
 
 }
